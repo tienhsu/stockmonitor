@@ -1,0 +1,30 @@
+.stock-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  white-space: nowrap;
+  gap: 12px;
+  font-size: 0.95em;
+  /* 统一字体大小 */
+}
+
+.stock-name {
+  flex: 0 0 auto;
+  opacity: 0.9;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stock-price {
+  flex: 1 0 auto;
+  text-align: right;
+}
+
+.stock-change {
+  flex: 0 0 auto;
+  min-width: 65px;
+  text-align: right;
+}

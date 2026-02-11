@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Stealth Stock Monitor",
+  "version": "0.1.0",
+  "identifier": "com.wolf.stealth-stock-monitor",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "monitor",
+        "title": "",
+        "url": "/",
+        "width": 300,
+        "height": 80,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "transparent": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false
+      },
+      {
+        "label": "settings",
+        "title": "设置 - Stealth Stock Monitor",
+        "url": "/settings",
+        "width": 600,
+        "height": 500,
+        "visible": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    },
+    "macOSPrivateApi": true,
+    "trayIcon": {
+      "iconPath": "icons/32x32.png",
+      "iconAsTemplate": true
+    }
+  },
+  "bundle": {
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": null,
+      "exceptionDomain": null,
+      "signingIdentity": null,
+      "entitlements": null,
+      "files": {}
+    },
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

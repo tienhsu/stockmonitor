@@ -1,0 +1,21 @@
+/* 悬浮窗口 - 极简、紧凑、无边框、自适应内容大小 */
+
+.floating-window {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: move;
+    /* 提示可拖动 */
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 2px 0;
+}
+
+/* 加载状态 */
+.stock-loading {
+    color: #666;
+    font-style: italic;
+}
