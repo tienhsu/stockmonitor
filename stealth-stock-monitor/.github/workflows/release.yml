@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build app
+        run: npm run tauri build
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create DMG
+        run: |
+          # 复制 app 到更简洁的名称
+          cp -R "src-tauri/target/release/bundle/macos/Stealth Stock Monitor.app" "Stealth-Stock-Monitor-${{ steps.version.outputs.VERSION }}.app"
+          # 重新打包为 dmg
+          hdiutil create -volname "Stealth Stock Monitor" \
+            -srcfolder "Stealth-Stock-Monitor-${{ steps.version.outputs.VERSION }}.app" \
+            -ov -format UDZO \
+            "Stealth-Stock-Monitor-${{ steps.version.outputs.VERSION }}-macos.dmg"
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            Stealth-Stock-Monitor-${{ steps.version.outputs.VERSION }}-macos.dmg
+            src-tauri/target/release/bundle/dmg/Stealth Stock Monitor_0.1.0_aarch64.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
