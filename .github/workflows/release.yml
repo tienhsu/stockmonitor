@@ -5,15 +5,9 @@ on:
     tags:
       - 'v*'
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   build-macos:
     runs-on: macos-latest
-    strategy:
-      matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,42 +17,22 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
       - name: Install dependencies
         run: npm install
 
-      - name: Install cargo-bundle
-        run: cargo install cargo-bundle
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Build app
-        run: |
-          export TAURI_TARGET_TRIPLE=${{ matrix.target }}
-          npm run tauri build
-        env:
-          TAURI_APP_TARGET_TRIPLE: ${{ matrix.target }}
-
-      - name: Extract version
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ matrix.target }}
-          path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
-            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+      - name: Build app (macOS)
+        run: npm run tauri build
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
-        if: matrix.target == 'aarch64-apple-darwin'
         with:
           files: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -73,18 +47,14 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
       - name: Install dependencies
         run: npm install
 
-      - name: Build app
-        run: npm run tauri build
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Extract version
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $env:GITHUB_OUTPUT
+      - name: Build app (Windows)
+        run: npm run tauri build
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
@@ -106,7 +76,7 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Setup Rust
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
@@ -123,12 +93,8 @@ jobs:
             librsvg2-dev
           npm install
 
-      - name: Build app
+      - name: Build app (Linux)
         run: npm run tauri build
-
-      - name: Extract version
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
