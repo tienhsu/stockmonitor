@@ -41,6 +41,7 @@ jobs:
           find src-tauri/target/release/bundle -type f -o -type d || true
 
       - name: Upload to Release (macOS)
+        working-directory: ./stealth-stock-monitor
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -77,7 +78,8 @@ jobs:
           echo "=== Listing built files ==="
           Get-ChildItem -Recurse src-tauri/target/release/bundle
 
-      - name: Upload to Release
+      - name: Upload to Release (Windows)
+        working-directory: ./stealth-stock-monitor
         uses: softprops/action-gh-release@v1
         with:
           files: |
@@ -121,6 +123,7 @@ jobs:
         run: npm run tauri build
 
       - name: Upload to Release (Linux)
+        working-directory: ./stealth-stock-monitor
         uses: softprops/action-gh-release@v1
         with:
           files: |
