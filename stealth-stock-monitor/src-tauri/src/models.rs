@@ -85,11 +85,12 @@ pub struct AppConfig {
 }
 
 /// 快捷键配置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ShortcutConfig {
     pub toggle_visible: String,
     pub next_stock: String,
     pub prev_stock: String,
+    pub open_settings: String,  // 打开设置窗口（用于鼠标穿透后无法通过右键菜单进入设置的情况）
 }
 
 /// 完整应用配置
@@ -139,6 +140,7 @@ impl Default for Config {
                 toggle_visible: "CommandOrControl+Shift+S".to_string(),
                 next_stock: "Alt+J".to_string(),
                 prev_stock: "Alt+K".to_string(),
+                open_settings: "CommandOrControl+Shift+O".to_string(),  // 打开设置
             },
             stocks: vec![
                 Stock {

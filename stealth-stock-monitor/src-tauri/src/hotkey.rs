@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 /// 全局快捷键管理器
 pub struct HotkeyManager {
     app: AppHandle,
-    config_store: Arc<ConfigStore>,
+    pub config_store: Arc<ConfigStore>,
 }
 
 impl HotkeyManager {
@@ -26,7 +26,10 @@ impl HotkeyManager {
         // 注册股票切换快捷键
         self.register_next_stock(&config.shortcuts.next_stock)?;
         self.register_prev_stock(&config.shortcuts.prev_stock)?;
-        
+
+        // 注册打开设置快捷键
+        self.register_open_settings(&config.shortcuts.open_settings)?;
+
         log::info!("全局快捷键已注册");
         Ok(())
     }
@@ -119,7 +122,7 @@ impl HotkeyManager {
         let config_store = self.config_store.clone();
         let app = self.app.clone();
         let shortcut: Shortcut = shortcut_str.parse()?;
-        
+
         let last_trigger = Arc::new(Mutex::new(Instant::now()));
 
         self.app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
@@ -129,20 +132,49 @@ impl HotkeyManager {
                     return;
                 }
                 *last = Instant::now();
-                
+
                 let config = config_store.get();
                 let visible_stocks: Vec<_> = config.stocks.iter().filter(|s| s.visible).collect();
-                
+
                 log::info!("Visible stocks count (prev): {}", visible_stocks.len());
 
                 if visible_stocks.len() <= 1 {
                     return;
                 }
-                
+
                 let _ = app.emit("hotkey-prev-stock", ());
             }
         })?;
-        
+
+        Ok(())
+    }
+
+    /// 注册打开设置快捷键（用于鼠标穿透后无法通过右键菜单进入设置的情况）
+    fn register_open_settings(&self, shortcut_str: &str) -> Result<()> {
+        let app = self.app.clone();
+        let shortcut: Shortcut = shortcut_str.parse()?;
+
+        let last_trigger = Arc::new(Mutex::new(Instant::now()));
+
+        self.app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
+            if event.state() == ShortcutState::Pressed {
+                let mut last = last_trigger.lock().unwrap();
+                if last.elapsed() < Duration::from_millis(300) {
+                    return;
+                }
+                *last = Instant::now();
+
+                log::info!("快捷键 triggered: open_settings");
+                if let Some(window) = app.get_webview_window("settings") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                    log::info!("已打开设置窗口");
+                } else {
+                    log::error!("找不到 settings 窗口");
+                }
+            }
+        })?;
+
         Ok(())
     }
 }

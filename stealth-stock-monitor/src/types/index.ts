@@ -65,6 +65,7 @@ export interface ShortcutConfig {
   toggle_visible: string;
   next_stock: string;
   prev_stock: string;
+  open_settings: string;  // 打开设置窗口（用于鼠标穿透后无法通过右键菜单进入设置的情况）
 }
 
 export interface Config {

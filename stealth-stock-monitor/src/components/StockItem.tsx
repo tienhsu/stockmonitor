@@ -34,10 +34,10 @@ export function StockItem({ data, config, rowHeight }: StockItemProps) {
     const displayName = stock?.alias || data.name || data.code;
 
     return (
-        <div className="stock-item" style={{ color, height: `${rowHeight}px` }} data-tauri-drag-region>
-            <span className="stock-name" data-tauri-drag-region>{displayName}</span>
-            <span className="stock-price" data-tauri-drag-region>{data.price.toFixed(2)}</span>
-            <span className="stock-change" data-tauri-drag-region>
+        <div className="stock-item" style={{ color, height: `${rowHeight}px` }}>
+            <span className="stock-name">{displayName}</span>
+            <span className="stock-price">{data.price.toFixed(2)}</span>
+            <span className="stock-change">
                 {formatPercent(data.percent)}
             </span>
         </div>

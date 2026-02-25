@@ -135,7 +135,6 @@ export function FloatingWindow() {
     return (
         <div
             className="floating-window"
-            data-tauri-drag-region
             onContextMenu={handleContextMenu}
             style={{
                 fontSize: `${fc.fontSize}px`,
@@ -150,9 +149,8 @@ export function FloatingWindow() {
                             key={stock.id}
                             className="stock-item stock-loading"
                             style={{ height: `${fc.rowHeight}px` }}
-                            data-tauri-drag-region
                         >
-                            <span className="stock-name" data-tauri-drag-region>{stock.alias || stock.code}</span>
+                            <span className="stock-name">{stock.alias || stock.code}</span>
                             <span className="stock-price">--</span>
                             <span className="stock-change">--</span>
                         </div>

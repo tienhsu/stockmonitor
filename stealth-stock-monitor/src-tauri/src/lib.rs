@@ -16,6 +16,7 @@ use poller::Poller;
 pub struct AppState {
     pub config_store: Arc<ConfigStore>,
     pub poller: Poller,
+    pub hotkey_manager: Arc<hotkey::HotkeyManager>,
 }
 
 // ==================== Tauri Commands ====================
@@ -33,10 +34,22 @@ fn update_config(
     app: AppHandle,
     config: Config,
 ) -> Result<(), String> {
+    // 检查快捷键是否有变更
+    let old_config = state.config_store.get();
+    let shortcuts_changed = old_config.shortcuts != config.shortcuts;
+
     state
         .config_store
         .update(config.clone())
         .map_err(|e| e.to_string())?;
+
+    // 如果快捷键配置有变更，重新注册快捷键
+    if shortcuts_changed {
+        if let Err(e) = state.hotkey_manager.reload() {
+            log::error!("重新注册快捷键失败: {}", e);
+        }
+    }
+
     let _ = app.emit("config-changed", &config);
     Ok(())
 }
@@ -178,11 +191,6 @@ async fn show_context_menu(app: AppHandle) -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let config_store = Arc::new(
-        ConfigStore::new().expect("无法初始化配置"),
-    );
-    let poller = Poller::new();
-
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -191,10 +199,6 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_store::Builder::default().build())
-        .manage(AppState {
-            config_store: config_store.clone(),
-            poller,
-        })
         .invoke_handler(tauri::generate_handler![
             get_config,
             update_config,
@@ -219,33 +223,81 @@ pub fn run() {
         })
         .setup(move |app| {
             let app_handle = app.handle().clone();
+            let config_store = Arc::new(ConfigStore::new().expect("无法初始化配置"));
 
-            // 启动数据轮询
-            let state: State<AppState> = app.state();
-            state.poller.start(app_handle.clone(), state.config_store.clone());
-
-            // 设置系统托盘
-            setup_tray(app)?;
-
-            // 注册全局快捷键
+            // 创建并注册全局快捷键管理器
             let hotkey_manager = hotkey::HotkeyManager::new(
                 app_handle.clone(),
-                state.config_store.clone(),
+                config_store.clone(),
             );
             if let Err(e) = hotkey_manager.register_all() {
                 log::error!("注册全局快捷键失败: {}", e);
             }
 
-            // 注册全局菜单事件处理器（用于右键菜单）
+            // 创建 AppState，包含 hotkey_manager
+            app.manage(AppState {
+                config_store: config_store.clone(),
+                poller: Poller::new(),
+                hotkey_manager: Arc::new(hotkey_manager),
+            });
+
+            // 启动数据轮询
+            let state: State<AppState> = app.state();
+            state.poller.start(app_handle.clone(), state.config_store.clone());
+
+            // 设置应用菜单（系统菜单）
+            setup_app_menu(app)?;
+
+            // 设置系统托盘
+            setup_tray(app)?;
+
+            // 注册全局菜单事件处理器（用于右键菜单和系统菜单）
             app.on_menu_event(move |app, event| {
                 log::info!("菜单事件: {:?}", event.id());
                 match event.id().as_ref() {
+                    // 系统菜单事件
+                    "about" => {
+                        log::info!("关于");
+                        if let Some(win) = app.get_webview_window("settings") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                    "app_settings" => {
+                        log::info!("打开设置（系统菜单）");
+                        if let Some(win) = app.get_webview_window("settings") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                    "hide" => {
+                        log::info!("隐藏应用");
+                        if let Some(win) = app.get_webview_window("monitor") {
+                            let _ = win.hide();
+                        }
+                    }
+                    "hide_others" => {
+                        log::info!("隐藏其他应用");
+                        // TODO: 实现隐藏其他应用
+                    }
+                    "show_all" => {
+                        log::info!("全部显示");
+                        if let Some(win) = app.get_webview_window("monitor") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                    "app_quit" => {
+                        log::info!("退出应用（系统菜单）");
+                        app.exit(0);
+                    }
+                    // 右键菜单事件
                     "ctx_refresh" => {
                         log::info!("刷新数据");
                         // 轮询器会自动刷新
                     }
                     "ctx_settings" => {
-                        log::info!("打开设置");
+                        log::info!("打开设置（右键菜单）");
                         if let Some(win) = app.get_webview_window("settings") {
                             let _ = win.show();
                             let _ = win.set_focus();
@@ -258,7 +310,19 @@ pub fn run() {
                         }
                     }
                     "ctx_quit" => {
-                        log::info!("退出应用");
+                        log::info!("退出应用（右键菜单）");
+                        app.exit(0);
+                    }
+                    // 系统托盘菜单事件
+                    "settings" => {
+                        log::info!("打开设置（托盘菜单）");
+                        if let Some(win) = app.get_webview_window("settings") {
+                            let _ = win.show();
+                            let _ = win.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        log::info!("退出应用（托盘菜单）");
                         app.exit(0);
                     }
                     _ => {}
@@ -269,6 +333,55 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("启动应用失败");
+}
+
+/// 设置应用菜单（系统菜单，macOS 显示在左上角应用名称下）
+fn setup_app_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let app_name = "Stealth Stock Monitor";
+
+    // 创建应用菜单项
+    let about = MenuItemBuilder::with_id("about", format!("关于 {}", app_name))
+        .build(app)?;
+    let separator1 = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let settings = MenuItemBuilder::with_id("app_settings", "设置...")
+        .build(app)?;
+    let separator2 = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let hide = MenuItemBuilder::with_id("hide", format!("隐藏 {}", app_name))
+        .accelerator("CommandOrControl+H")
+        .build(app)?;
+    let hide_others = MenuItemBuilder::with_id("hide_others", "隐藏其他")
+        .accelerator("CommandOrControl+Shift+H")
+        .build(app)?;
+    let show_all = MenuItemBuilder::with_id("show_all", "全部显示")
+        .build(app)?;
+    let separator3 = tauri::menu::PredefinedMenuItem::separator(app)?;
+    let quit = MenuItemBuilder::with_id("app_quit", format!("退出 {}", app_name))
+        .accelerator("CommandOrControl+Q")
+        .build(app)?;
+
+    // 创建应用子菜单（macOS 左上角应用名称下的菜单）
+    let app_menu = tauri::menu::SubmenuBuilder::with_id(app, "app_menu", app_name)
+        .items(&[
+            &about,
+            &separator1,
+            &settings,
+            &separator2,
+            &hide,
+            &hide_others,
+            &show_all,
+            &separator3,
+            &quit,
+        ])
+        .build()?;
+
+    // 设置应用系统菜单
+    app.set_menu(
+        tauri::menu::MenuBuilder::new(app)
+            .item(&app_menu)
+            .build()?,
+    )?;
+
+    Ok(())
 }
 
 /// 设置系统托盘

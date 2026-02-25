@@ -199,8 +199,9 @@ export function SettingsWindow() {
                                 checked={config.window.click_through}
                                 onChange={(e) => updateField('window', 'click_through', e.target.checked)}
                             />
-                            鼠标穿透模式（开启后无法点击窗口，需通过设置关闭）
+                            鼠标穿透模式
                         </label>
+                        <span className="hint">开启后无法点击窗口，可通过「快捷键」中的「打开设置」或系统托盘菜单关闭</span>
                     </div>
                     <div className="form-group">
                         <label>字体大小</label>
@@ -283,11 +284,15 @@ export function SettingsWindow() {
             {/* 快捷键 */}
             {activeTab === 'shortcuts' && (
                 <div className="tab-content">
+                    <div className="shortcut-hint">
+                        💡 快捷键在任何情况下都能触发，包括鼠标穿透模式
+                    </div>
                     {[
-                        { key: 'toggle_visible', label: '显示/隐藏窗口' },
-                        { key: 'next_stock', label: '下一只股票' },
-                        { key: 'prev_stock', label: '上一只股票' },
-                    ].map(({ key, label }) => (
+                        { key: 'toggle_visible', label: '显示/隐藏窗口', hint: '' },
+                        { key: 'next_stock', label: '下一只股票', hint: '' },
+                        { key: 'prev_stock', label: '上一只股票', hint: '' },
+                        { key: 'open_settings', label: '打开设置', hint: '鼠标穿透后进入设置的唯一方式' },
+                    ].map(({ key, label, hint }) => (
                         <div key={key} className="form-group">
                             <label>{label}</label>
                             <input
@@ -306,6 +311,7 @@ export function SettingsWindow() {
                                 onKeyDown={(e) => handleKeyDown(e, key)}
                                 onBlur={() => setRecordingKey(null)}
                             />
+                            {hint && <span className="hint">{hint}</span>}
                         </div>
                     ))}
                 </div>
@@ -356,25 +362,12 @@ export function SettingsWindow() {
             {activeTab === 'about' && (
                 <div className="tab-content">
                     <div className="about-section" style={{ padding: '20px', textAlign: 'center', color: '#e0e0e0' }}>
-                        <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#fff' }}>关于我们</h2>
+                        <h2 style={{ fontSize: '18px', marginBottom: '16px', color: '#fff' }}>关于本软件</h2>
                         <p style={{ lineHeight: '1.6', marginBottom: '24px', color: '#ccc' }}>
-                            我们是一支专业的软件开发团队，致力于提供高质量的技术解决方案。
+                            一款轻量级跨平台悬浮股票监控工具，
                             <br />
-                            承接各类软件开发工作，包括但不限于：
+                            帮助你实时关注自选股行情。
                         </p>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(2, 1fr)',
-                            gap: '12px',
-                            textAlign: 'left',
-                            maxWidth: '400px',
-                            margin: '0 auto 30px auto'
-                        }}>
-                            <div className="service-item">🚀 桌面应用开发</div>
-                            <div className="service-item">🌐 Web 应用开发</div>
-                            <div className="service-item">📱 移动端 App 开发</div>
-                            <div className="service-item">🤖 自动化脚本定制</div>
-                        </div>
 
                         <div style={{
                             background: 'rgba(74, 158, 255, 0.1)',
@@ -382,14 +375,14 @@ export function SettingsWindow() {
                             borderRadius: '8px',
                             display: 'inline-block'
                         }}>
-                            <p style={{ marginBottom: '8px', fontSize: '14px', color: '#888' }}>业务合作请联系</p>
-                            <a href="mailto:contact@example.com" style={{
+                            <p style={{ marginBottom: '8px', fontSize: '14px', color: '#888' }}>联系作者</p>
+                            <a href="mailto:wolf3057@163.com" style={{
                                 color: '#4a9eff',
                                 fontSize: '16px',
                                 textDecoration: 'none',
                                 fontWeight: '600'
                             }}>
-                                contact@example.com
+                                wolf3057@163.com
                             </a>
                         </div>
                         <p style={{ marginTop: '40px', fontSize: '12px', color: '#666' }}>
