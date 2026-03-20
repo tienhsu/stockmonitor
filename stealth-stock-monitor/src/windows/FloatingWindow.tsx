@@ -3,7 +3,7 @@ import { useStockData } from '../hooks/useStockData';
 import { StockItem } from '../components/StockItem';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import './FloatingWindow.css';
 
 /**
@@ -27,11 +27,110 @@ export function FloatingWindow() {
     const { config } = useConfig();
     const { getStock } = useStockData();
     const [scrollOffset, setScrollOffset] = useState(0);
+    
+    // 拖动状态
+    const isDragging = useRef(false);
+    const dragStartPos = useRef({ x: 0, y: 0 });
+    const windowStartPos = useRef({ x: 0, y: 0 });
+    const rafId = useRef<number | null>(null);
+    const pendingPos = useRef({ x: 0, y: 0 });
 
     // 获取当前字体配置
     const fc = config
         ? FONT_CONFIG[config.app.font_size] || FONT_CONFIG.medium
         : FONT_CONFIG.medium;
+
+    // ==================== 手动拖动窗口 ====================
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        // 只有左键可以拖动
+        if (e.button !== 0) return;
+        
+        isDragging.current = true;
+        dragStartPos.current = { x: e.screenX, y: e.screenY };
+        
+        // 立即获取窗口位置
+        invoke<[number, number]>('get_monitor_window_position')
+            .then(pos => {
+                windowStartPos.current = { x: pos[0], y: pos[1] };
+            })
+            .catch(err => {
+                console.error('获取窗口位置失败:', err);
+                isDragging.current = false;
+            });
+    }, []);
+
+    // 使用 requestAnimationFrame 节流，避免频繁更新窗口位置
+    const updateWindowPosition = useCallback(() => {
+        if (rafId.current !== null) return;
+        
+        rafId.current = requestAnimationFrame(() => {
+            rafId.current = null;
+            if (!isDragging.current) return;
+            
+            invoke('move_monitor_window', { 
+                x: pendingPos.current.x, 
+                y: pendingPos.current.y 
+            }).catch(console.error);
+        });
+    }, []);
+
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!isDragging.current) return;
+        
+        const deltaX = e.screenX - dragStartPos.current.x;
+        const deltaY = e.screenY - dragStartPos.current.y;
+        
+        pendingPos.current = {
+            x: windowStartPos.current.x + deltaX,
+            y: windowStartPos.current.y + deltaY
+        };
+        
+        updateWindowPosition();
+    }, [updateWindowPosition]);
+
+    const handleMouseUp = useCallback(() => {
+        isDragging.current = false;
+        if (rafId.current !== null) {
+            cancelAnimationFrame(rafId.current);
+            rafId.current = null;
+        }
+    }, []);
+
+    // 添加全局鼠标事件监听
+    useEffect(() => {
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (!isDragging.current) return;
+            
+            const deltaX = e.screenX - dragStartPos.current.x;
+            const deltaY = e.screenY - dragStartPos.current.y;
+            
+            pendingPos.current = {
+                x: windowStartPos.current.x + deltaX,
+                y: windowStartPos.current.y + deltaY
+            };
+            
+            updateWindowPosition();
+        };
+
+        const handleGlobalMouseUp = () => {
+            isDragging.current = false;
+            if (rafId.current !== null) {
+                cancelAnimationFrame(rafId.current);
+                rafId.current = null;
+            }
+        };
+
+        window.addEventListener('mousemove', handleGlobalMouseMove);
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        
+        return () => {
+            window.removeEventListener('mousemove', handleGlobalMouseMove);
+            window.removeEventListener('mouseup', handleGlobalMouseUp);
+            if (rafId.current !== null) {
+                cancelAnimationFrame(rafId.current);
+            }
+        };
+    }, [updateWindowPosition]);
 
     // ==================== 窗口大小自适应 ====================
     useEffect(() => {
@@ -135,6 +234,9 @@ export function FloatingWindow() {
     return (
         <div
             className="floating-window"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
             onContextMenu={handleContextMenu}
             style={{
                 fontSize: `${fc.fontSize}px`,

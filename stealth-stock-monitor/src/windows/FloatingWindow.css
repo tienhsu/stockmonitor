@@ -8,10 +8,21 @@
     cursor: move;
     /* 提示可拖动 */
     user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
     display: flex;
     flex-direction: column;
     justify-content: center;
     padding: 2px 0;
+}
+
+/* 确保所有子元素也不能选择文本 */
+.floating-window * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 /* 加载状态 */

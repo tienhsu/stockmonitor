@@ -22,7 +22,8 @@
         "transparent": true,
         "skipTaskbar": true,
         "resizable": false,
-        "shadow": false
+        "shadow": false,
+        "dragDropEnabled": true
       },
       {
         "label": "settings",

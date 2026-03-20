@@ -150,6 +150,32 @@ fn resize_monitor_window(app: AppHandle, width: f64, height: f64) -> Result<(), 
     Ok(())
 }
 
+/// 手动移动窗口位置（用于实现自定义拖动）
+#[tauri::command]
+fn move_monitor_window(app: AppHandle, x: f64, y: f64) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("monitor") {
+        let position = tauri::LogicalPosition::new(x, y);
+        window.set_position(position).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// 获取窗口当前位置（返回逻辑坐标）
+#[tauri::command]
+fn get_monitor_window_position(app: AppHandle) -> Result<(f64, f64), String> {
+    if let Some(window) = app.get_webview_window("monitor") {
+        // outer_position 返回物理坐标，需要转换为逻辑坐标
+        let physical_pos = window.outer_position().map_err(|e| e.to_string())?;
+        let scale_factor = window.scale_factor().map_err(|e| e.to_string())?;
+        
+        let logical_x = physical_pos.x as f64 / scale_factor;
+        let logical_y = physical_pos.y as f64 / scale_factor;
+        
+        return Ok((logical_x, logical_y));
+    }
+    Err("找不到 monitor 窗口".to_string())
+}
+
 /// 在悬浮窗口上弹出原生右键菜单
 #[tauri::command]
 async fn show_context_menu(app: AppHandle) -> Result<(), String> {
@@ -210,6 +236,8 @@ pub fn run() {
             open_settings,
             force_refresh,
             resize_monitor_window,
+            move_monitor_window,
+            get_monitor_window_position,
             show_context_menu,
         ])
         .on_window_event(|window, event| {
